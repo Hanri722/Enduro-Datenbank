@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EXO-Bike // Enduro &amp; Cross Referenzdatenbank</title>
+<title>Enduro &amp; Cross Referenzdatenbank</title>
 <meta name="description" content="Community-Referenzdatenbank für 61 Enduro- und Cross-Motorräder (125–530 ccm, 11 Marken): Preise, Gewicht, Wartung, Leistung, Straßenzulassung und ein eigenes Bewertungssystem zum Vergleichen. Kein offizielles Herstellerprodukt.">
-<meta property="og:title" content="EXO-Bike // Enduro &amp; Cross Referenzdatenbank">
+<meta property="og:title" content="Enduro &amp; Cross Referenzdatenbank">
 <meta property="og:description" content="61 Enduro-/Cross-Modelle vergleichen: Preis, Wartung, Leistung, Straßenzulassung, eigenes 0–100-Bewertungssystem. Community-Projekt, keine offiziellen Herstellerdaten.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0a0a0a">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a0a'/%3E%3Ctext x='50' y='68' font-family='monospace' font-size='58' font-weight='700' fill='%23e8ff00' text-anchor='middle'%3EEX%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a0a'/%3E%3Ctext x='50' y='68' font-family='monospace' font-size='58' font-weight='700' fill='%23e8ff00' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -238,16 +238,44 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:po
   font-family:var(--mono);font-size:0.68rem;color:var(--muted);line-height:1.7;
 }
 @media(max-width:768px){ .disclaimer-banner{padding:0.7rem 1rem;} }
+
+/* ── QUIZ / FINDER (wiederverwendet EXO-Bike Guided-Builder-Komponenten) ── */
+.step-option {
+  display: flex; align-items: center; justify-content:space-between; gap: 0.75rem;
+  background: var(--bg3); border: 1px solid var(--border);
+  padding: 0.85rem 1.1rem; cursor: pointer; transition: all 0.18s; margin-bottom:0.6rem;
+}
+.step-option:hover { border-color: var(--border2); background: var(--bg2); }
+.step-option.checked { border-color: var(--accent); background: rgba(232,255,0,0.04); }
+.step-option-label { font-size: 0.92rem; font-weight: 600; }
+.step-option-sub { font-size: 0.75rem; color: var(--muted2); font-family: var(--mono); margin-top:2px; }
+.progress-wrap { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.75rem; }
+.progress-label { font-family: var(--mono); font-size: 0.72rem; color: var(--muted2); white-space: nowrap; }
+.progress-track { flex: 1; height: 2px; background: var(--border); position: relative; }
+.progress-fill { height: 100%; background: var(--accent); transition: width 0.4s ease; }
+.quiz-question { font-family:var(--font); font-size:1.15rem; font-weight:700; margin-bottom:1rem; }
+.result-card {
+  border: 1px solid var(--border); background: var(--bg2); padding: 1.25rem;
+  display: flex; flex-direction: column; gap: 0.6rem; margin-bottom:1rem;
+}
+.result-card.featured { border-color: var(--accent); background: rgba(232,255,0,0.03); }
+.result-card-name { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+.result-rank { font-family:var(--mono); font-size:0.65rem; color:var(--accent); letter-spacing:0.1em; text-transform:uppercase; }
+.quiz-actions{ display:flex; gap:0.6rem; margin-top:0.5rem; }
+.quiz-back{ background:none; border:1px solid var(--border2); color:var(--muted2); font-family:var(--mono); font-size:0.72rem; padding:0.5rem 1rem; cursor:pointer; }
+.quiz-back:hover{ color:var(--text); border-color:var(--border2); }
+.quiz-why{ font-size:0.75rem; color:var(--muted2); line-height:1.5; margin-top:4px; }
 </style>
 </head>
 <body>
 
 <nav>
-  <span class="nav-logo">EXO-BIKE // REF-DB</span>
+  <span class="nav-logo">MOTO // REF-DB</span>
   <div class="nav-links">
     <button class="nav-pill active" data-tab="matrix" onclick="setTab('matrix')">Matrix</button>
     <button class="nav-pill" data-tab="list" onclick="setTab('list')">Liste</button>
     <button class="nav-pill" data-tab="compare" onclick="setTab('compare')">Vergleichen <span id="compare-count">(0)</span></button>
+    <button class="nav-pill" data-tab="quiz" onclick="setTab('quiz')">Finder</button>
   </div>
 </nav>
 
@@ -288,13 +316,18 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:po
     <div id="compare-target"></div>
   </div>
 
+  <div id="view-quiz" style="display:none;">
+    <span class="section-label">Bike-Finder — 5 Fragen zum passenden Modell</span>
+    <div id="quiz-target"></div>
+  </div>
+
   <div class="divider" style="margin:2rem 0 1.5rem;"></div>
 
   <span class="section-label">Detailansicht</span>
   <div id="detail-target"></div>
 
   <div class="footer-note">
-    EXO-Bike Referenzdatenbank &mdash; privates Community-Projekt, keine offizielle Herstellerseite, kein Anspruch auf Vollständigkeit oder Aktualität.<br>
+    Enduro &amp; Cross Referenzdatenbank &mdash; privates Community-Projekt, keine offizielle Herstellerseite, kein Anspruch auf Vollständigkeit oder Aktualität.<br>
     Alle Marken-/Modellnamen gehören ihren jeweiligen Rechteinhabern; diese Seite ist nicht mit KTM, Husqvarna, GasGas, Beta, Sherco, TM Moto, Fantic, Yamaha, Honda, Kove oder Rieju verbunden oder von ihnen autorisiert.<br>
     Leistungswerte, Wartungsintervalle, Komponenten-/Ersatzteilnetz-Bewertung und der 0&ndash;100-Score sind eigene, transparent dokumentierte Einschätzungen &mdash; keine Werksangaben. Fehler gefunden? Gerne melden.
   </div>
@@ -724,9 +757,177 @@ function setTab(tab){
   document.getElementById('view-matrix').style.display = tab === 'matrix' ? '' : 'none';
   document.getElementById('view-list').style.display = tab === 'list' ? '' : 'none';
   document.getElementById('view-compare').style.display = tab === 'compare' ? '' : 'none';
+  document.getElementById('view-quiz').style.display = tab === 'quiz' ? '' : 'none';
   if(tab === 'compare') renderCompare();
+  if(tab === 'quiz') renderQuiz();
 }
 document.getElementById('search').addEventListener('input', e=>{ searchTerm = e.target.value; updateClearBtn(); renderMatrix(); renderList(); });
+
+/* ============================================
+   BIKE-FINDER QUIZ
+   ============================================ */
+const QUIZ_QUESTIONS = [
+  {
+    key: 'erfahrung', q: 'Wie viel Erfahrung hast du?', multi: false,
+    options: [
+      {v:'einsteiger', l:'Einsteiger', sub:'Erste eigene Endurance / A2 oder wenig Fahrpraxis im Gelände'},
+      {v:'fortgeschritten', l:'Fortgeschritten', sub:'Schon einige Zeit unterwegs, willst mehr Leistung'},
+      {v:'profi', l:'Profi', sub:'Erfahren, willst das volle Potenzial'},
+    ]
+  },
+  {
+    key: 'budget', q: 'Wie viel willst du ausgeben?', multi: false,
+    options: [
+      {v:9000, l:'Bis 9.000 €', sub:''},
+      {v:11000, l:'Bis 11.000 €', sub:''},
+      {v:13000, l:'Bis 13.000 €', sub:''},
+      {v:99999, l:'Preis ist egal', sub:''},
+    ]
+  },
+  {
+    key: 'takt', q: '2-Takt oder 4-Takt?', multi: true,
+    options: [
+      {v:'2T', l:'2-Takt', sub:'Leicht, spritzig, mehr Wartung'},
+      {v:'4T', l:'4-Takt', sub:'Mehr Laufruhe, oft länger haltbar'},
+    ],
+    hint: 'Beides oder nichts anwählen = keine Einschränkung.'
+  },
+  {
+    key: 'strasse', q: 'Straßenzulassung wichtig?', multi: false,
+    options: [
+      {v:'ja', l:'Ja, muss zugelassen sein', sub:'Fahrzeug soll auf die Straße dürfen'},
+      {v:'egal', l:'Egal', sub:'Reine Wettkampfmaschine ist auch ok'},
+    ]
+  },
+  {
+    key: 'prioritaet', q: 'Was ist dir wichtig?', multi: true,
+    options: [
+      {v:'maint', l:'Wenig Wartungsaufwand', sub:''},
+      {v:'weight', l:'Geringes Gewicht', sub:''},
+      {v:'preis', l:'Günstiger Preis', sub:''},
+      {v:'ptw', l:'Viel Leistung', sub:''},
+      {v:'komponenten', l:'Hochwertige Komponenten', sub:''},
+    ],
+    hint: 'Mehrfachauswahl möglich — such dir 1–3 Prioritäten aus.'
+  },
+];
+
+let quizStep = 0;
+let quizAnswers = {};
+
+function renderQuiz(){
+  const el = document.getElementById('quiz-target');
+  if(quizStep >= QUIZ_QUESTIONS.length){ renderQuizResults(el); return; }
+  const step = QUIZ_QUESTIONS[quizStep];
+  const progress = Math.round((quizStep / QUIZ_QUESTIONS.length) * 100);
+  const current = quizAnswers[step.key];
+  const options = step.options.map(o => {
+    const isChecked = step.multi
+      ? Array.isArray(current) && current.includes(o.v)
+      : current === o.v;
+    return `
+      <div class="step-option${isChecked ? ' checked' : ''}" onclick="quizAnswer('${step.key}', ${typeof o.v === 'number' ? o.v : `'${o.v}'`}, ${step.multi})">
+        <div>
+          <div class="step-option-label">${o.l}</div>
+          ${o.sub ? `<div class="step-option-sub">${o.sub}</div>` : ''}
+        </div>
+        <div style="font-family:var(--mono);color:var(--accent);">${isChecked ? '✓' : ''}</div>
+      </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="progress-wrap">
+      <span class="progress-label">Frage ${quizStep+1}/${QUIZ_QUESTIONS.length}</span>
+      <div class="progress-track"><div class="progress-fill" style="width:${progress}%;"></div></div>
+    </div>
+    <div class="quiz-question">${step.q}</div>
+    ${step.hint ? `<div class="step-option-sub" style="margin:-0.5rem 0 0.75rem;">${step.hint}</div>` : ''}
+    ${options}
+    <div class="quiz-actions">
+      ${quizStep > 0 ? `<button class="quiz-back" onclick="quizBack()">← Zurück</button>` : ''}
+      ${step.multi ? `<button class="btn-primary btn-small" onclick="quizNext()">Weiter →</button>` : ''}
+    </div>
+  `;
+}
+
+function quizAnswer(key, val, isMulti){
+  if(isMulti){
+    const arr = Array.isArray(quizAnswers[key]) ? quizAnswers[key].slice() : [];
+    const i = arr.indexOf(val);
+    if(i >= 0) arr.splice(i,1); else arr.push(val);
+    quizAnswers[key] = arr;
+    renderQuiz();
+  } else {
+    quizAnswers[key] = val;
+    quizStep++;
+    renderQuiz();
+  }
+}
+function quizNext(){ quizStep++; renderQuiz(); }
+function quizBack(){ quizStep = Math.max(0, quizStep - 1); renderQuiz(); }
+function quizRestart(){ quizStep = 0; quizAnswers = {}; renderQuiz(); }
+
+function scoreMatches(){
+  let pool = DB.details.slice();
+
+  if(quizAnswers.budget) pool = pool.filter(d => d.preis <= quizAnswers.budget);
+  const takt = quizAnswers.takt || [];
+  if(takt.length === 1) pool = pool.filter(d => d.hubraum.includes(takt[0]));
+  if(quizAnswers.strasse === 'ja') pool = pool.filter(d => d.strassenzulassung === 'ja');
+  if(quizAnswers.erfahrung === 'einsteiger') pool = pool.filter(d => d.score_tier !== 'gross-4T');
+  if(quizAnswers.erfahrung === 'profi') pool = pool.filter(d => d.score_tier === 'gross-4T' || d.score_tier === 'mittel-4T' || d.score_tier === 'mittel-2T');
+
+  const prios = quizAnswers.prioritaet || [];
+  const prioValue = (d, p) => {
+    if(p === 'maint') return (d.score_sub.maint_routine + d.score_sub.maint_major) / 2;
+    return d.score_sub[p];
+  };
+
+  pool.forEach(d => {
+    const prioScore = prios.length
+      ? prios.reduce((sum,p) => sum + prioValue(d,p), 0) / prios.length
+      : d.score;
+    d._quizScore = 0.6 * prioScore + 0.4 * d.score;
+  });
+
+  return pool.sort((a,b) => b._quizScore - a._quizScore).slice(0, 3);
+}
+
+const PRIO_LABEL = {
+  maint: 'wenig Wartungsaufwand', weight: 'geringes Gewicht', preis: 'günstigen Preis',
+  ptw: 'viel Leistung', komponenten: 'hochwertige Komponenten'
+};
+
+function renderQuizResults(el){
+  const results = scoreMatches();
+  if(results.length === 0){
+    el.innerHTML = `
+      <div class="empty-hint">Keine Bikes gefunden, die auf alle Kriterien passen. Probier's mit lockereren Angaben nochmal.</div>
+      <button class="btn-primary" style="margin-top:1rem;" onclick="quizRestart()">Nochmal starten</button>
+    `;
+    return;
+  }
+  const prioText = (quizAnswers.prioritaet || []).map(p => PRIO_LABEL[p]).join(', ') || 'ein ausgewogenes Profil';
+  const cards = results.map((d, i) => `
+    <div class="result-card ${i===0 ? 'featured' : ''}">
+      <div class="result-rank">${i===0 ? '★ Beste Übereinstimmung' : `Platz ${i+1}`}</div>
+      <div class="result-card-name">${d.marke} ${d.modell}</div>
+      <div class="quiz-why">Passt zu deinem Fokus auf ${prioText}, liegt im gewählten Budget${quizAnswers.strasse==='ja' ? ' und ist straßenzugelassen' : ''}.</div>
+      <div class="result-card-stats">
+        <div class="result-stat"><div class="result-stat-val">${d.score}</div><div class="result-stat-label">Score</div></div>
+        <div class="result-stat"><div class="result-stat-val">${fmtPrice(d.preis).replace(' €','€')}</div><div class="result-stat-label">Preis</div></div>
+        <div class="result-stat"><div class="result-stat-val">${d.gewicht}</div><div class="result-stat-label">Gewicht</div></div>
+      </div>
+      <div class="quiz-actions">
+        <button class="btn-primary btn-small" onclick="selectId('${d.id}'); setTab('matrix'); document.getElementById('detail-target').scrollIntoView({behavior:'smooth'});">Details ansehen</button>
+        <button class="btn-ghost btn-small" onclick="quickAddCompare('${d.id}')">+ Vergleichen</button>
+      </div>
+    </div>
+  `).join('');
+  el.innerHTML = `
+    ${cards}
+    <button class="quiz-back" onclick="quizRestart()">↺ Nochmal von vorn</button>
+  `;
+}
 
 renderStats(); renderMatrix(); renderList(); renderDetail(); updateCompareCount();
 </script>
