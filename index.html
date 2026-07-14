@@ -154,15 +154,16 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:po
 .warn-box b{color:var(--accent);}
 .kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 2rem;}
 .compare-scroll{overflow-x:auto;border:1px solid var(--border);}
-.compare-table{border-collapse:collapse;min-width:100%;}
-.compare-table th, .compare-table td{border:1px solid var(--border);padding:9px 14px;font-size:0.78rem;white-space:nowrap;}
+.compare-table{border-collapse:collapse;min-width:100%;table-layout:fixed;}
+.compare-table th, .compare-table td{border:1px solid var(--border);padding:6px 9px;font-size:0.7rem;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
 .compare-table th.rowlabel, .compare-table td.rowlabel{
-  position:sticky;left:0;background:var(--bg3);z-index:1;font-family:var(--mono);font-size:0.65rem;color:var(--muted);
-  text-transform:uppercase;letter-spacing:0.05em;text-align:left;white-space:normal;min-width:150px;
+  position:sticky;left:0;background:var(--bg3);z-index:1;font-family:var(--mono);font-size:0.6rem;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.04em;text-align:left;white-space:normal;min-width:120px;max-width:120px;
 }
-.compare-table thead th{background:var(--bg3);font-family:var(--font);font-size:0.85rem;color:var(--text);text-align:left;font-weight:600;}
-.compare-table thead th .cm{display:block;font-family:var(--mono);font-size:0.62rem;color:var(--muted2);font-weight:400;margin-top:2px;}
+.compare-table thead th{background:var(--bg3);font-family:var(--font);font-size:0.75rem;color:var(--text);text-align:left;font-weight:600;white-space:normal;}
+.compare-table thead th .cm{display:block;font-family:var(--mono);font-size:0.58rem;color:var(--muted2);font-weight:400;margin-top:2px;}
 .compare-table tbody td{background:var(--bg);color:var(--muted2);}
+.compare-table td.wrap-cell{white-space:normal;}
 .remove-x{background:none;border:none;color:var(--muted);cursor:pointer;float:right;font-size:0.7rem;font-family:var(--mono);}
 .remove-x:hover{color:var(--red);}
 .clear-filter{display:none;}
@@ -192,6 +193,26 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:po
 .cmp-equal{background:rgba(232,255,0,0.1) !important;color:var(--accent) !important;}
 @media(max-width:640px){ .score-sub-grid{grid-template-columns:repeat(2,1fr);} }
 @media(max-width:640px){ .kv-grid{grid-template-columns:1fr;} .result-card-stats{display:none;} }
+
+.similar-list{display:flex;flex-direction:column;gap:0.5rem;}
+.similar-chip{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:var(--bg3);border:1px solid var(--border);padding:0.6rem 0.8rem;
+}
+.sc-name{font-size:0.85rem;font-weight:600;color:var(--text);}
+.sc-meta{font-size:0.72rem;color:var(--muted2);font-family:var(--mono);margin-top:2px;display:flex;align-items:center;gap:6px;}
+.score-pill.mini2{font-size:0.65rem;padding:0.08rem 0.4rem;}
+
+.glance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;margin-bottom:1.25rem;}
+.glance-card{background:var(--bg2);border:1px solid var(--border);padding:1rem;position:relative;}
+.glance-card .gc-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;}
+.glance-card .gc-remove:hover{color:var(--red);}
+.glance-card .gc-brand{font-family:var(--mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.glance-card .gc-name{font-family:var(--font);font-size:1rem;font-weight:700;margin:2px 0 8px;}
+.glance-card .gc-score{margin-bottom:8px;}
+.glance-card .gc-row{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--muted2);padding:0.2rem 0;}
+.glance-card .gc-row b{color:var(--text);font-family:var(--mono);}
+.toggle-table-btn{margin:0.5rem 0 1rem;}
 </style>
 </head>
 <body>
@@ -339,7 +360,15 @@ function parseNum(str){
   const m = String(str).replace(/\./g,'').replace(',', '.').match(/-?\d+(\.\d+)?/);
   return m ? parseFloat(m[0]) : 0;
 }
-const numericSortKeys = new Set(['gewicht','hubraum','preis']);
+const numericSortKeys = new Set(['gewicht','hubraum','preis','leistung_offen','wartung_routine','wartung_major','score']);
+const colValueGetters = {
+  leistung_offen: d => avgNums(d.leistung_offen),
+  wartung_routine: d => extractHoursAvg(d.wartung_motor),
+  wartung_major: d => extractHoursAvg(d.wartung_kolben),
+};
+function colValue(d, key){
+  return colValueGetters[key] ? colValueGetters[key](d) : d[key];
+}
 
 function tierLabel(t){
   const map = {
@@ -352,9 +381,25 @@ function tierLabel(t){
 }
 function scoreClass(s){ return s >= 58 ? 's-high' : (s >= 47 ? 's-mid' : 's-low'); }
 
+function extractHoursAvg(text){
+  const nums = [];
+  const re = /(\d+)(?:–(\d+))?\s*Std/g;
+  let m;
+  while((m = re.exec(text)) !== null){
+    const a = parseFloat(m[1]);
+    const b = m[2] ? parseFloat(m[2]) : a;
+    nums.push((a+b)/2);
+  }
+  return nums.length ? nums.reduce((x,y)=>x+y,0)/nums.length : null;
+}
+
 function renderList(){
   const table = document.getElementById('list-table');
-  const cols = [{k:'marke',l:'Marke'},{k:'modell',l:'Modell'},{k:'hubraum',l:'Hubraum'},{k:'gewicht',l:'Gewicht'},{k:'preis',l:'Preis'},{k:'score',l:'Score'}];
+  const cols = [
+    {k:'marke',l:'Marke'},{k:'modell',l:'Modell'},{k:'hubraum',l:'Hubraum'},{k:'gewicht',l:'Gewicht'},
+    {k:'preis',l:'Preis'},{k:'leistung_offen',l:'Leistung offen / gedrosselt'},{k:'wartung_routine',l:'Wartung Routine'},
+    {k:'wartung_major',l:'Wartung Großservice'},{k:'score',l:'Score'}
+  ];
   let thead = '<thead><tr><th></th>' + cols.map(c=>{
     const arrow = sortKey===c.k ? (sortDir===1?' \u2191':' \u2193') : '';
     const activeCls = sortKey===c.k ? ' style="color:var(--accent);"' : '';
@@ -363,9 +408,10 @@ function renderList(){
   let items = DB.details.filter(passesFilters);
   if(sortKey){
     items = items.slice().sort((a,b)=>{
-      let av=a[sortKey], bv=b[sortKey];
+      let av=colValue(a,sortKey), bv=colValue(b,sortKey);
       if(numericSortKeys.has(sortKey)){
-        av = parseNum(av); bv = parseNum(bv);
+        av = av===null||av===undefined ? -Infinity : parseNum(av);
+        bv = bv===null||bv===undefined ? -Infinity : parseNum(bv);
       } else if(typeof av === 'string'){
         av=av.toLowerCase(); bv=bv.toLowerCase();
       }
@@ -381,10 +427,13 @@ function renderList(){
       <td onclick="setClassFilter('${d.klasse}')" style="cursor:pointer;">${d.hubraum}</td>
       <td class="num">${d.gewicht}</td>
       <td class="num">${fmtPrice(d.preis)}</td>
+      <td class="num" style="font-size:0.68rem;">${d.leistung_offen}<br><span style="color:var(--muted2);">${d.leistung_strasse}</span></td>
+      <td class="num" style="font-size:0.72rem;">${d.wartung_motor}</td>
+      <td class="num" style="font-size:0.72rem;">${d.wartung_kolben}</td>
       <td class="num"><span class="score-pill ${scoreClass(d.score)}">${d.score}</span></td>
     </tr>`;
   }).join('');
-  if(items.length === 0){ rows = `<tr><td colspan="7" style="text-align:center;color:var(--muted);font-family:var(--mono);">Keine Treffer</td></tr>`; }
+  if(items.length === 0){ rows = `<tr><td colspan="10" style="text-align:center;color:var(--muted);font-family:var(--mono);">Keine Treffer</td></tr>`; }
   table.innerHTML = thead + '<tbody>' + rows + '</tbody>';
 }
 
@@ -471,8 +520,58 @@ function renderDetail(){
         <div class="kv"><span>Kupplung</span><b>${w.kupplung||'–'}</b></div>
       </div>
       <div class="warn-box">Motor/Getriebe/Kolben/Ventile-Intervalle stammen aus Herstellerangaben je Modell. Übrige Intervalle sind branchenübliche Richtwerte.</div>
+
+      <span class="section-label" style="margin-top:1rem;">Ähnliche Bikes</span>
+      <div id="similar-wrap"></div>
     </div>
   `;
+  renderSimilar(d);
+}
+
+function findSimilar(id, n){
+  const d = byId(id);
+  if(!d) return [];
+  const pool = DB.details.filter(x => x.id !== id && x.score_tier === d.score_tier);
+  const priceSpread = Math.max(1, Math.max(...pool.map(x=>x.preis)) - Math.min(...pool.map(x=>x.preis)));
+  pool.forEach(x => { x._dist = Math.abs(x.preis - d.preis) / priceSpread; });
+  return pool.sort((a,b) => a._dist - b._dist).slice(0, n);
+}
+
+function renderSimilar(d){
+  const el = document.getElementById('similar-wrap');
+  if(!el) return;
+  const similar = findSimilar(d.id, 4);
+  const chips = similar.map(s => {
+    const inCmp = compareIds.includes(s.id);
+    return `
+      <div class="similar-chip">
+        <div>
+          <div class="sc-name">${s.marke} <span style="color:var(--muted2);font-weight:400;">${s.modell}</span></div>
+          <div class="sc-meta">${fmtPrice(s.preis)} &middot; ${s.gewicht} &middot; <span class="score-pill ${scoreClass(s.score)} mini2">${s.score}</span></div>
+        </div>
+        <button class="btn-ghost btn-small" onclick="quickAddCompare('${s.id}')">${inCmp ? '✓ im Vergleich' : '+ Vergleichen'}</button>
+      </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="similar-list">${chips || '<p class="empty-hint">Keine ähnlichen Bikes in dieser Gruppe gefunden.</p>'}</div>
+    <button class="btn-primary btn-small" style="margin-top:0.75rem;" onclick="compareWithSimilar('${d.id}')">Dieses Bike + ähnliche vergleichen</button>
+  `;
+}
+
+function quickAddCompare(id){
+  if(!compareIds.includes(id)){
+    if(compareIds.length >= 5){ alert('Maximal 5 Modelle gleichzeitig vergleichen.'); return; }
+    compareIds.push(id);
+  }
+  updateCompareCount(); renderList();
+  if(selectedId) renderSimilar(byId(selectedId));
+}
+
+function compareWithSimilar(id){
+  const similar = findSimilar(id, 3).map(s => s.id);
+  compareIds = Array.from(new Set([id, ...similar])).slice(0,5);
+  updateCompareCount(); renderList();
+  setTab('compare');
 }
 
 function toggleCompare(id){
@@ -490,33 +589,53 @@ function avgNums(str){
 
 function starterRaw(d){ return d.starter.includes('E-Starter') ? 100 : 30; }
 function avgTwo(a,b){ const x=avgNums(a), y=avgNums(b); if(x===null||y===null) return null; return (x+y)/2; }
+function ersatzteilRank(d){
+  const map = {'sehr gut':100, 'gut':75, 'mittel':50, 'eingeschränkt':25};
+  return map[d.ersatzteilnetz_de] ?? 50;
+}
 
 const compareRows = [
-  {l:'Bewertung (0–100)', fmt:d=>`<span class="score-pill ${scoreClass(d.score)}">${d.score}</span>`, raw:d=>d.score, dir:'high'},
-  {l:'Preis (UVP ca.)', fmt:d=>fmtPrice(d.preis), raw:d=>d.preis, dir:'low'},
-  {l:'Hubraum & Takt', fmt:d=>d.hubraum},
-  {l:'Gewicht (trocken)', fmt:d=>d.gewicht, raw:d=>avgNums(d.gewicht), dir:'low'},
+  {l:'Bewertung', fmt:d=>`<span class="score-pill ${scoreClass(d.score)}">${d.score}</span>`, raw:d=>d.score, dir:'high'},
+  {l:'Preis', fmt:d=>fmtPrice(d.preis), raw:d=>d.preis, dir:'low'},
+  {l:'Hubraum', fmt:d=>d.hubraum, cls:'wrap-cell'},
+  {l:'Gewicht', fmt:d=>d.gewicht, raw:d=>avgNums(d.gewicht), dir:'low'},
   {l:'Leistung offen', fmt:d=>d.leistung_offen, raw:d=>avgNums(d.leistung_offen), dir:'high'},
   {l:'Leistung Straße', fmt:d=>d.leistung_strasse, raw:d=>avgNums(d.leistung_strasse), dir:'high'},
-  {l:'Fahrwerkskomponenten', fmt:d=>`${d.score_sub.komponenten}/100 &mdash; ${d.komponenten_note}`, raw:d=>d.score_sub.komponenten, dir:'high'},
+  {l:'Komponenten', fmt:d=>`<span title="${d.komponenten_note}">${d.score_sub.komponenten}/100</span>`, raw:d=>d.score_sub.komponenten, dir:'high'},
   {l:'Starter', fmt:d=>d.starter, raw:starterRaw, dir:'high'},
-  {l:'Tankinhalt', fmt:d=>d.tank, raw:d=>avgNums(d.tank), dir:'high'},
-  {l:'Federweg v/h', fmt:d=>`${d.federweg_vorne} / ${d.federweg_hinten}`, raw:d=>avgTwo(d.federweg_vorne,d.federweg_hinten), dir:'high'},
-  {l:'Bremse v/h', fmt:d=>`${d.bremse_vorne} / ${d.bremse_hinten}`, raw:d=>avgTwo(d.bremse_vorne,d.bremse_hinten), dir:'high'},
-  {l:'Räder', fmt:d=>d.raeder, raw:d=>1, dir:'high'},
-  {l:'Ersatzteilnetz DE (Info)', fmt:d=>`${d.ersatzteilnetz_de} &mdash; ${d.ersatzteilnetz_de_note}`},
+  {l:'Tank', fmt:d=>d.tank, raw:d=>avgNums(d.tank), dir:'high'},
+  {l:'Federweg v/h', fmt:d=>`${d.federweg_vorne}/${d.federweg_hinten}`, raw:d=>avgTwo(d.federweg_vorne,d.federweg_hinten), dir:'high'},
+  {l:'Bremse v/h', fmt:d=>`${d.bremse_vorne}/${d.bremse_hinten}`, raw:d=>avgTwo(d.bremse_vorne,d.bremse_hinten), dir:'high'},
+  {l:'Räder', fmt:d=>'21"/18"', raw:d=>1, dir:'high'},
+  {l:'Wartung Routine', fmt:d=>`<span title="${d.wartung_motor}">${d.wartung_motor}</span>`, raw:d=>extractHoursAvg(d.wartung_motor), dir:'high', cls:'wrap-cell'},
+  {l:'Wartung Großserv.', fmt:d=>`<span title="${d.wartung_kolben}">${d.wartung_kolben}</span>`, raw:d=>extractHoursAvg(d.wartung_kolben), dir:'high', cls:'wrap-cell'},
+  {l:'Ersatzteilnetz DE', fmt:d=>`<span title="${d.ersatzteilnetz_de_note}">${d.ersatzteilnetz_de}</span>`, raw:ersatzteilRank, dir:'high'},
   {l:'Straßenzulassung', fmt:d=>badgeFor(d.strassenzulassung)},
   {l:'Sitzhöhe', fmt:d=>d.sitzhoehe},
-  {l:'Rahmen', fmt:d=>d.rahmen},
-  {l:'Fahrwerk', fmt:d=>d.fahrwerk},
-  {l:'Wartung Motor/Getriebe', fmt:d=>d.wartung_motor},
-  {l:'Wartung Kolben/Ventile', fmt:d=>d.wartung_kolben},
+  {l:'Rahmen', fmt:d=>`<span title="${d.rahmen}">${d.rahmen}</span>`, cls:'wrap-cell'},
 ];
+
+let showFullTable = true;
 
 function renderCompare(){
   const el = document.getElementById('compare-target');
-  if(compareIds.length === 0){ el.innerHTML = '<div class="empty-hint">Noch keine Modelle ausgewählt. In der Liste die Checkbox nutzen.</div>'; return; }
+  if(compareIds.length === 0){ el.innerHTML = '<div class="empty-hint">Noch keine Modelle ausgewählt. In der Liste die Checkbox nutzen, oder in einer Detailkarte "Ähnliche Bikes" verwenden.</div>'; return; }
   const models = compareIds.map(byId).filter(Boolean);
+
+  const glanceCards = models.map(d => `
+    <div class="glance-card">
+      <button class="gc-remove" onclick="toggleCompare('${d.id}')">&times;</button>
+      <div class="gc-brand">${d.marke}</div>
+      <div class="gc-name">${d.modell}</div>
+      <div class="gc-score"><span class="score-pill ${scoreClass(d.score)}">${d.score}<span style="opacity:0.5;font-weight:400;">/100</span></span> ${badgeFor(d.strassenzulassung)}</div>
+      <div class="gc-row"><span>Preis</span><b>${fmtPrice(d.preis)}</b></div>
+      <div class="gc-row"><span>Gewicht</span><b>${d.gewicht}</b></div>
+      <div class="gc-row"><span>Leistung offen</span><b>${d.leistung_offen}</b></div>
+      <div class="gc-row"><span>Wartung Routine</span><b>${d.wartung_motor}</b></div>
+      <div class="gc-row"><span>Komponenten</span><b>${d.score_sub.komponenten}/100</b></div>
+    </div>
+  `).join('');
+
   let thead = '<thead><tr><th class="rowlabel">Merkmal</th>' + models.map(d =>
     `<th>${d.marke}<span class="cm">${d.modell}</span><button class="remove-x" onclick="toggleCompare('${d.id}')">&times; entfernen</button></th>`
   ).join('') + '</tr></thead>';
@@ -538,22 +657,29 @@ function renderCompare(){
         });
       }
     }
-    const cells = models.map((d,i) => `<td class="${cellClasses[i]}">${r.fmt(d)}</td>`).join('');
+    const extraCls = r.cls ? ' ' + r.cls : '';
+    const cells = models.map((d,i) => `<td class="${cellClasses[i]}${extraCls}">${r.fmt(d)}</td>`).join('');
     return `<tr><td class="rowlabel">${r.l}</td>${cells}</tr>`;
   }).join('');
 
   el.innerHTML = `
-    <div class="compare-scroll"><table class="compare-table">${thead}<tbody>${rows}</tbody></table></div>
-    <div class="warn-box" style="margin-top:0.75rem;">
-      <b>Farblegende:</b> <span style="color:var(--green);">grün</span> = bester Wert in der Zeile,
-      <span style="color:var(--red);">rot</span> = schwächster Wert, <span style="color:var(--accent);">gelb</span> = alle verglichenen Werte gleich.
-      Gilt für Bewertung, Preis, Gewicht, Leistung, Komponenten, Starter, Tank, Federweg, Bremse und Räder.
-      Federweg/Bremse/Räder sind in dieser Datenbank bei allen 61 Modellen identisch (Branchenstandard) — zeigen also praktisch immer Gelb.
-      <b>Absichtlich ungefärbt:</b> Rahmen (Stahl vs. Alu ist Trade-off, kein Fakt), Ersatzteilnetz (reine Info),
-      Straßenzulassung (eigenes Ampel-System), Sitzhöhe (auf Wunsch ausgenommen).
+    <div class="glance-grid">${glanceCards}</div>
+    <button class="btn-ghost btn-small toggle-table-btn" onclick="toggleFullTable()">${showFullTable ? 'Detailtabelle ausblenden ▲' : 'Alle Details in Tabelle anzeigen ▼'}</button>
+    <div id="compare-table-wrap" style="display:${showFullTable ? '' : 'none'};">
+      <div class="compare-scroll"><table class="compare-table">${thead}<tbody>${rows}</tbody></table></div>
+      <div class="warn-box" style="margin-top:0.75rem;">
+        <b>Farblegende:</b> <span style="color:var(--green);">grün</span> = bester Wert in der Zeile,
+        <span style="color:var(--red);">rot</span> = schwächster Wert, <span style="color:var(--accent);">gelb</span> = alle verglichenen Werte gleich.
+        Gilt jetzt für fast alle Zeilen: Bewertung, Preis, Gewicht, Leistung, Komponenten, Starter, Tank, Federweg, Bremse, Räder, beide Wartungsintervalle und Ersatzteilnetz.
+        Federweg/Bremse/Räder sind bei allen 61 Modellen identisch (Branchenstandard) — zeigen also praktisch immer Gelb.
+        <b>Absichtlich ungefärbt:</b> Hubraum (Klassifikation, kein Werturteil), Rahmen (Stahl vs. Alu ist Trade-off, kein Fakt),
+        Straßenzulassung (eigenes Ampel-System), Sitzhöhe (auf Wunsch ausgenommen). Lange Werte zeigen den vollen Text als Tooltip beim Hovern.
+      </div>
     </div>
   `;
 }
+
+function toggleFullTable(){ showFullTable = !showFullTable; renderCompare(); }
 
 function selectId(id){ selectedId = id || null; renderMatrix(); renderList(); renderDetail(); }
 function sortBy(key){ if(sortKey===key){sortDir*=-1;}else{sortKey=key;sortDir=1;} renderList(); }
